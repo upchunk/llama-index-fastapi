@@ -15,8 +15,9 @@ from llama_index import (
     SimpleDirectoryReader,
 )
 from llama_index.llms import OpenAI
-from llama_index.response_synthesizers import get_response_synthesizer, ResponseMode
-from llama_index.indices.postprocessor import SimilarityPostprocessor
+
+# from llama_index.response_synthesizers import get_response_synthesizer, ResponseMode
+# from llama_index.indices.postprocessor import SimilarityPostprocessor
 from app.data.models.qa import Source
 from app.utils.log_util import logger
 from app.utils import jsonl_util, data_util
@@ -84,37 +85,39 @@ def query_index(query_text) -> Dict[str, Any]:
     """Query the global index."""
     global index
     logger.info(f"Query test: {query_text}")
-    # first search locally
-    local_query_engine = index.as_query_engine(
-        response_synthesizer=get_response_synthesizer(
-            response_mode=ResponseMode.NO_TEXT
-        ),
-        node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.85)],
-    )
-    local_query_response = local_query_engine.query(query_text)
-    if len(local_query_response.source_nodes) > 0:
-        text = local_query_response.source_nodes[0].text
-        if 'answer": ' in text:
-            answer_text = text.split('answer": ')[1].strip('"\n}')
-            if 'category": ' in text:
-                category = text.split('category": ')[1].split(",")[0].strip('"\n}')
-                category = None if data_util.is_empty(category) else category
-            else:
-                category = None
-            return {
-                "category": category,
-                "question": query_text,
-                "source": Source.KNOWLEDGE_BASE,
-                "answer": answer_text,
-            }
-    # if not found, turn to LLM
+    # # first search locally
+    # local_query_engine = index.as_query_engine(
+    #     response_synthesizer=get_response_synthesizer(
+    #         response_mode=ResponseMode.NO_TEXT
+    #     ),
+    #     node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.85)],
+    # )
+    # local_query_response = local_query_engine.query(query_text)
+    # if len(local_query_response.source_nodes) > 0:
+    #     text = local_query_response.source_nodes[0].text
+    #     if 'answer": ' in text:
+    #         answer_text = text.split('answer": ')[1].strip('"\n}')
+    #         if 'category": ' in text:
+    #             category = text.split('category": ')[1].split(",")[0].strip('"\n}')
+    #             category = None if data_util.is_empty(category) else category
+    #         else:
+    #             category = None
+    #         return {
+    #             "category": category,
+    #             "question": query_text,
+    #             "source": Source.KNOWLEDGE_BASE,
+    #             "answer": answer_text,
+    #         }
+    # # if not found, turn to LLM
+
+    # Always use LLM to get different results
     qa_template = Prompt(prompt_template_string)
     llm_query_engine = index.as_query_engine(text_qa_template=qa_template)
     response = llm_query_engine.query(query_text)
     answer_text = str(response)
-    # save the question-answer pair to index
-    question_answer_pair = f'"source": "conversation", "category": "", "question": {query_text}, "answer": {answer_text}'
-    insert_text_into_index(question_answer_pair)
+    # # save the question-answer pair to index
+    # question_answer_pair = f'"source": "conversation", "category": "", "question": {query_text}, "answer": {answer_text}'
+    # insert_text_into_index(question_answer_pair)
     return {
         "category": None,
         "question": query_text,
